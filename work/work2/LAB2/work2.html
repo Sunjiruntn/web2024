@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แบบทดสอบเกี่ยวกับทวีป</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@3.7.4/dist/vuetify.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@3.7.4/dist/vuetify.min.js"></script>
+    <style>
+        /* เปลี่ยนโทนสีเป็นฟ้า มินิมอล */
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #e0f7fa; /* สีฟ้าอ่อน */
+            color: #333;
+        }
+
+        #app {
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .v-card {
+            border-radius: 10px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+            background-color: white;
+        }
+
+        .v-btn {
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .v-btn.primary {
+            background-color: #00bcd4; /* สีฟ้าอ่อน */
+            color: white;
+        }
+
+        .v-btn:hover {
+            background-color: #008c9e; /* สีฟ้าเข้ม */
+        }
+
+        .v-card-title {
+            font-size: 1.5rem;
+            color: #00796b; /* สีฟ้าเข้ม */
+            font-weight: 500;
+        }
+
+        .v-card-text {
+            font-size: 1.1rem;
+            color: #555;
+            margin-bottom: 20px;
+        }
+
+        .v-radio-group {
+            margin-top: 10px;
+        }
+
+        .v-radio {
+            color: #00bcd4;
+        }
+
+        .v-btn[disabled] {
+            background-color: #ddd;
+            color: #bbb;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <v-app>
+            <v-container>
+                <!-- หน้าแนะนำก่อนเริ่มทำควิซ -->
+                <v-card v-if="started && !quizStarted">
+                    <v-card-title>เกี่ยวกับแบบทดสอบ</v-card-title>
+                    <v-card-text>
+                        คุณกำลังจะทำแบบทดสอบเกี่ยวกับ {{ quizTitle }} ซึ่งเป็นแบบทดสอบที่เกี่ยวข้องกับข้อมูลเชิงลึกของทวีป {{ quizTitle }} 
+                        เช่น ประชากร, เมืองหลวง, พื้นที่, และสถานที่สำคัญต่าง ๆ ทั่วทวีป {{ quizTitle }} คุณสามารถเลือกคำตอบจากตัวเลือกที่ให้มา
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-btn color="primary" @click="startQuizNow">เริ่มทำแบบทดสอบ</v-btn>
+                    </v-card-actions>
+                </v-card>
+
+                <!-- หน้าเลือกหัวข้อ -->
+                <v-card v-if="!started && !quizStarted">
+                    <v-card-title>เลือกหัวข้อแบบทดสอบ</v-card-title>
+                    <v-card-text>
+                        เลือกหัวข้อที่คุณต้องการทำควิซ:
+                        <ul>
+                            <li>ควิซเกี่ยวกับทวีปเอเชีย</li>
+                            <li>ควิซเกี่ยวกับทวีปยุโรป</li>
+                        </ul>
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-btn color="primary" @click="startQuiz('quiz1', 'ทวีปเอเชีย')">เริ่มทำแบบทดสอบทวีปเอเชีย</v-btn>
+                        <v-btn color="primary" @click="startQuiz('quiz2', 'ทวีปยุโรป')">เริ่มทำแบบทดสอบทวีปยุโรป</v-btn>
+                    </v-card-actions>
+                </v-card>
+
+                <!-- หน้าคำถาม -->
+                <v-card v-if="quizStarted && currentQuestionIndex < questions.length">
+                    <v-card-title>
+                        ข้อ {{ currentQuestionIndex + 1 }}: {{ currentQuestion.question }}
+                    </v-card-title>
+                    <v-card-text>
+                        <v-radio-group v-model="answers[currentQuestionIndex]" column>
+                            <v-radio v-for="(option, index) in currentQuestion.options" :key="index" :label="option" :value="index"></v-radio>
+                        </v-radio-group>
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-btn color="primary" @click="nextQuestion">ข้อต่อไป</v-btn>
+                    </v-card-actions>
+                </v-card>
+
+                <!-- แสดงผลคะแนน -->
+                <v-card v-if="quizStarted && currentQuestionIndex >= questions.length">
+                    <v-card-title>คุณทำข้อสอบเสร็จแล้ว!</v-card-title>
+                    <v-card-text>
+                        คะแนนที่ได้: {{ score }}/{{ questions.length }}
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-btn color="primary" @click="resetQuiz">เริ่มทำแบบทดสอบใหม่</v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-container>
+        </v-app>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+        const { createVuetify } = Vuetify;
+
+        const vuetify = createVuetify();
+
+        createApp({
+            data() {
+                return {
+                    started: false, // สถานะเริ่มต้น
+                    quizStarted: false, // สถานะเริ่มทำควิซ
+                    quizTitle: "", // ชื่อหัวข้อที่เลือก
+                    questions: [], // คำถามที่โหลดจาก JSON
+                    answers: [], // เก็บคำตอบของผู้ใช้
+                    currentQuestionIndex: 0, // ดัชนีของคำถามที่แสดง
+                    score: null, // คะแนนที่ได้
+                };
+            },
+            computed: {
+                currentQuestion() {
+                    return this.questions[this.currentQuestionIndex];
+                },
+            },
+            methods: {
+                startQuiz(quizType, title) {
+                    this.started = true;
+                    this.quizTitle = title; // กำหนดหัวข้อที่เลือก
+                    this.quizStarted = false;
+                    this.loadQuestions(quizType);
+                },
+                async loadQuestions(quizType) {
+                    try {
+                        const response = await fetch(`${quizType}.json`);
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        const data = await response.json();
+                        this.questions = data.questions;
+                        this.answers = Array(this.questions.length).fill(null);
+                    } catch (error) {
+                        console.error("Error loading questions:", error);
+                    }
+                },
+                startQuizNow() {
+                    this.quizStarted = true;
+                },
+                nextQuestion() {
+                    if (this.answers[this.currentQuestionIndex] === null) {
+                        alert("กรุณาเลือกคำตอบก่อนทำข้อถัดไป!");
+                        return;
+                    }
+                    this.currentQuestionIndex++;
+                    if (this.currentQuestionIndex >= this.questions.length) {
+                        this.checkAnswers();
+                    }
+                },
+                checkAnswers() {
+                    this.score = this.answers.reduce((score, answer, index) => {
+                        return answer === this.questions[index].answer ? score + 1 : score;
+                    }, 0);
+                },
+                resetQuiz() {
+                    this.started = false;
+                    this.quizStarted = false;
+                    this.questions = [];
+                    this.answers = [];
+                    this.currentQuestionIndex = 0;
+                    this.score = null;
+                },
+            },
+        }).use(vuetify).mount("#app");
+    </script>
+</body>
+</html>
